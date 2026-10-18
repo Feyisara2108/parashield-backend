@@ -473,6 +473,36 @@ Fee per tx: ~0.00001 XLM. Fund via `stellar keys fund <address> --network testne
 
 ---
 
+## Redis connection & startup retry (#710)
+
+The app creates a single shared Redis client (`REDIS_URL`) used for rate limiting,
+idempotency, distributed locks and the policy-state cache. The client is created
+with `lazyConnect`, so construction never blocks; the first connection is performed
+during startup by `RedisConnectionService` (`src/redis/redis-connection.service.ts`).
+
+Startup behaviour:
+
+- The first connection is retried with exponential backoff, a capped delay and
+  jitter. A per-attempt timeout guarantees a hung connect cannot stall startup.
+- If every attempt fails, startup fails fast with one actionable error naming the
+  Redis `host:port` (never the username/password or full URL).
+- Once connected, runtime reconnection is handed back to ioredis (its
+  `retryStrategy`/`reconnectOnError` handle transient drops).
+
+Tuning (all optional — defaults shown):
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `REDIS_STARTUP_MAX_ATTEMPTS` | `5` | Total connection attempts, including the first. |
+| `REDIS_STARTUP_INITIAL_DELAY_MS` | `200` | Delay before the second attempt; doubles each retry. |
+| `REDIS_STARTUP_MAX_DELAY_MS` | `3000` | Upper bound for the backoff delay. |
+| `REDIS_STARTUP_ATTEMPT_TIMEOUT_MS` | `5000` | Per-attempt timeout. |
+
+Invalid values (negative, non-integer or out of range) fail startup with a clear
+validation error. Credentials embedded in `REDIS_URL` are never logged.
+
+---
+
 ## v2 roadmap
 
 - Full Soroban SDK transaction builder for all write paths (currently stubbed with `// TODO` markers)
