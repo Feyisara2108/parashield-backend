@@ -412,6 +412,8 @@ CONCURRENCY_TEST_DATABASE_URL=postgresql://.../parashield_test npx jest claims.c
 | Flight delay | [AviationStack](https://aviationstack.com) | Yes (`AVIATIONSTACK_API_KEY`) |
 | DeFi exploit | Stellar RPC event stream | No |
 
+**Threshold evaluation (#712):** oracle readings are 7-decimal fixed point (e.g. `324000000` = 32.4) and product thresholds are `Decimal(20,7)`. Trigger comparisons are done on exact scaled `BigInt` values (`src/common/utils/decimal.ts`) rather than `parseFloat`, so the last decimal place is never lost and a reading exactly equal to the threshold never triggers (strict `LessThan` / greater-than).
+
 ---
 
 ## Project layout
