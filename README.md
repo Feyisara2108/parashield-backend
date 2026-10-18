@@ -132,6 +132,26 @@ npm run start:prod
 
 ---
 
+## API versioning (#713)
+
+Every response carries an `X-API-Version` header advertising the semantic
+version that served it (`v1` → `1.0.0`, `v2` → `2.0.0`), including error
+responses, streamed responses (SSE/NDJSON) and responses that never reach a
+route handler (CORS preflights, request timeouts).
+
+- The version is taken from the route's `vN` segment (`/api/v1/...`), falling
+  back to a request `x-api-version` header, then to `v1`.
+- Requests for an unknown version (`/api/v3/...`) are rejected with `400`.
+- `v1` responses also include `Deprecation: true` and
+  `Link: </api/v2>; rel="successor"`.
+- The header is exposed via CORS so browser clients can read it.
+
+Resolution lives in `src/common/versioning/api-version.ts` and is applied by the
+versioning interceptor (success paths), the global exception filter (error
+paths) and an early middleware (everything else).
+
+---
+
 ## CORS configuration
 
 CORS is enabled in `src/main.ts` and controlled entirely via environment variables (see `.env.example`):

@@ -19,6 +19,7 @@ import { ErrorResponseDto } from './common/swagger/error-response.dto';
 import { initializeOpenTelemetry } from './common/telemetry/opentelemetry';
 import { parseTrustProxy } from './common/network/trust-proxy';
 import { applySecurityHeaders } from './common/security/response-header-hardening';
+import { createApiVersionMiddleware } from './common/versioning/api-version';
 import compression from 'compression';
 import { ConfigService } from '@nestjs/config';
 import { json, urlencoded } from 'express';
@@ -91,6 +92,11 @@ async function bootstrap() {
   app.set('json replacer', (_key: string, value: unknown) =>
     typeof value === 'bigint' ? value.toString() : value,
   );
+
+  // #713 — Stamp X-API-Version on every response as early as possible so it is
+  // present even on responses that bypass the interceptor/exception-filter
+  // pipeline (CORS preflights, timeouts, static docs).
+  app.use(createApiVersionMiddleware());
 
   // Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.).
   // #711 — also disables Express's X-Powered-By and strips leaky headers such
@@ -225,6 +231,8 @@ async function bootstrap() {
     methods: corsMethods,
     allowedHeaders: corsAllowedHeaders,
     credentials: corsCredentials,
+    // #713 — let browser clients read the version/deprecation headers.
+    exposedHeaders: ['X-API-Version', 'Deprecation', 'Link'],
   });
 
   app.setGlobalPrefix('api/v1');
