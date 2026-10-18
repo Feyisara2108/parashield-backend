@@ -370,6 +370,7 @@ All `BigInt` values (such as oracle readings, large policy IDs, and 64-bit times
 
 - **Input sanitization**: a global middleware (`InputSanitizationMiddleware`, registered in `src/main.ts`) trims every string in JSON/urlencoded request bodies and escapes `<`/`>` before validation and persistence, so markup cannot survive into stored values or reflected responses.
 - **Connection pooling**: Prisma pool sizing is applied at runtime to the datasource URL (`connection_limit=10`, `pool_timeout=10`, `connect_timeout=5`). Override each value with `DATABASE_CONNECTION_LIMIT`, `DATABASE_POOL_TIMEOUT`, `DATABASE_CONNECT_TIMEOUT`, or by putting the parameter directly in `DATABASE_URL`.
+- **Response header hardening (#711)**: `applySecurityHeaders()` (`src/common/security/response-header-hardening.ts`, called from `src/main.ts`) disables Express's `X-Powered-By`, applies [helmet](https://helmetjs.github.io/) and strips implementation-revealing headers (`Server`, `X-Powered-By`, `X-AspNet-Version`, `X-AspNetMvc-Version`, `X-Runtime`, `Via`) from every response. Stripping is done at the header level, so headers added later by the framework or an upstream proxy are removed too. Extra names can be added via `extraHeadersToStrip`.
 
 ---
 
